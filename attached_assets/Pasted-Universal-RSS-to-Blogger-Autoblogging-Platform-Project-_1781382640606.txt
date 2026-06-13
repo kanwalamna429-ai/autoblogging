@@ -1,0 +1,562 @@
+Universal RSS-to-Blogger Autoblogging Platform
+
+Project Overview
+
+Build a modern SaaS web application that automatically imports content from RSS feeds, rewrites it using Google Gemini AI, publishes it to Blogger.com, and immediately distributes it to social platforms.
+
+The platform should focus on simplicity, speed, and reliability.
+
+No post scheduling system.
+
+No queue system.
+
+No delayed publishing.
+
+Workflow:
+
+RSS Feed → AI Rewrite → Blogger Publish → Social Distribution
+
+All actions happen immediately after processing.
+
+---
+
+Core Goal
+
+Create a complete autoblogging platform for affiliate marketing, crypto, personal finance, travel, pets, and other content niches.
+
+The system must support:
+
+- Multiple Blogger blogs
+- Multiple RSS feeds
+- Google Gemini AI rewriting
+- Auto publishing to Blogger
+- Auto sharing to Bluesky
+- Auto sharing to Mastodon
+- Auto sharing to Tumblr
+- Auto sharing to Pixelfed
+- Full admin dashboard
+- SaaS-ready architecture
+
+---
+
+Tech Stack
+
+Frontend:
+
+- Next.js 15 App Router
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+
+Backend:
+
+- Next.js API Routes
+- Server Actions
+
+Database:
+
+- Supabase PostgreSQL
+
+Authentication:
+
+- Supabase Auth
+
+AI:
+
+- Google Gemini API
+
+Deployment:
+
+- Vercel
+
+Storage:
+
+- Supabase Storage
+
+---
+
+Application Architecture
+
+src/
+
+app/
+
+(auth)
+(login)
+(register)
+(dashboard)
+
+dashboard/
+
+overview
+feeds
+posts
+blogs
+social
+settings
+analytics
+
+api/
+
+feeds
+rewrite
+publish
+social
+webhooks
+
+components/
+
+dashboard
+forms
+tables
+editor
+settings
+
+lib/
+
+supabase
+gemini
+blogger
+bluesky
+mastodon
+tumblr
+pixelfed
+
+types/
+
+database
+api
+
+---
+
+Authentication
+
+Use Supabase Authentication.
+
+Features:
+
+- Email signup
+- Email login
+- Password reset
+- Session management
+- Protected dashboard
+
+---
+
+Database Schema
+
+users
+
+- id
+- email
+- created_at
+
+blogs
+
+- id
+- user_id
+- blog_id
+- blog_name
+- blog_url
+- connected_at
+
+feeds
+
+- id
+- user_id
+- name
+- feed_url
+- category
+- active
+- created_at
+
+posts
+
+- id
+- user_id
+- feed_id
+- source_url
+- source_title
+- rewritten_title
+- rewritten_content
+- blogger_post_id
+- blogger_url
+- status
+- created_at
+
+social_accounts
+
+- id
+- user_id
+- platform
+- account_name
+- access_token
+- active
+
+settings
+
+- id
+- user_id
+- ai_prompt
+- auto_publish
+- auto_share
+- created_at
+
+logs
+
+- id
+- user_id
+- action
+- message
+- status
+- created_at
+
+---
+
+Dashboard Pages
+
+Overview
+
+Show:
+
+- Total feeds
+- Total posts
+- Total blogs
+- Total shares
+- Recent activity
+
+---
+
+RSS Feeds
+
+Features:
+
+- Add feed
+- Edit feed
+- Delete feed
+- Activate/deactivate feed
+- Manual fetch
+
+Display:
+
+- Feed name
+- Feed URL
+- Category
+- Status
+
+---
+
+Blogger Blogs
+
+Connect Blogger via Google OAuth.
+
+Features:
+
+- List connected blogs
+- Select default blog
+- Remove blog
+
+Display:
+
+- Blog title
+- Blog URL
+- Publish status
+
+---
+
+Posts
+
+Display all generated content.
+
+Features:
+
+- Search
+- Filter
+- Edit content
+- Edit title
+- Publish now
+- Republish
+
+Status:
+
+- Draft
+- Published
+- Failed
+
+---
+
+Social Accounts
+
+Connect:
+
+- Bluesky
+- Mastodon
+- Tumblr
+- Pixelfed
+
+Display:
+
+- Account name
+- Status
+- Last share
+
+---
+
+Settings
+
+Global options:
+
+- Gemini API Key
+- Rewrite Prompt
+- Auto Publish
+- Auto Share
+
+---
+
+RSS Processing
+
+When user clicks "Fetch Feed":
+
+1. Fetch RSS XML
+
+2. Parse content
+
+3. Extract:
+   
+   - Title
+   - Content
+   - Image
+   - URL
+   - Author
+   - Date
+
+4. Check duplicates
+
+Duplicate logic:
+
+Do not process if source URL already exists.
+
+---
+
+AI Rewrite Module
+
+Use Gemini API.
+
+Prompt:
+
+Rewrite article completely while preserving facts.
+
+Requirements:
+
+- Human readable
+- SEO optimized
+- Unique wording
+- Proper headings
+- FAQ section
+- Conclusion
+- No plagiarism
+- Keep original meaning
+
+Generate:
+
+- New title
+- Meta description
+- Tags
+- Full article
+
+Output HTML.
+
+---
+
+Blogger Integration
+
+Use Google Blogger API.
+
+Features:
+
+- OAuth login
+- Select blog
+- Create post
+- Update post
+- Delete post
+
+Publishing process:
+
+1. Generate content
+2. Publish immediately
+3. Save Blogger Post ID
+4. Save Published URL
+
+---
+
+Social Distribution
+
+Immediately after successful Blogger publication.
+
+No scheduling.
+
+No queue.
+
+No cron.
+
+No delays.
+
+---
+
+Bluesky
+
+Create post:
+
+Title
+Short excerpt
+Article URL
+
+---
+
+Mastodon
+
+Create status:
+
+Title
+Excerpt
+Article URL
+
+---
+
+Tumblr
+
+Create link post:
+
+Title
+Excerpt
+Article URL
+
+---
+
+Pixelfed
+
+Create image post:
+
+Featured image
+Caption
+Article URL
+
+---
+
+Content Workflow
+
+User clicks:
+
+Fetch Feed
+
+System:
+
+RSS Feed
+↓
+Parse Article
+↓
+Duplicate Check
+↓
+Gemini Rewrite
+↓
+Create Blogger Post
+↓
+Publish Blogger Post
+↓
+Share To Bluesky
+↓
+Share To Mastodon
+↓
+Share To Tumblr
+↓
+Share To Pixelfed
+↓
+Save Logs
+↓
+Success
+
+---
+
+Analytics
+
+Display:
+
+- Total posts
+- Total shares
+- Publishing success rate
+- Feed performance
+
+Charts:
+
+- Posts per day
+- Shares per platform
+
+---
+
+Logging System
+
+Track every action.
+
+Examples:
+
+Feed fetched
+Article rewritten
+Blogger published
+Bluesky shared
+Mastodon shared
+Tumblr shared
+Pixelfed shared
+
+Store status:
+
+- Success
+- Failed
+
+Store error messages.
+
+---
+
+UI Design
+
+Style:
+
+- Modern SaaS
+- Clean layout
+- Professional
+- Responsive
+- Fast
+
+Use:
+
+- Shadcn UI
+- Tailwind CSS
+- Dark Mode
+- Light Mode
+
+---
+
+Security
+
+- Encrypt API keys
+- Secure OAuth tokens
+- Validate RSS URLs
+- Rate limiting
+- CSRF protection
+- Server-side API calls only
+
+---
+
+Code Requirements
+
+- TypeScript everywhere
+- Strict typing
+- Modular architecture
+- Reusable components
+- Clean folder structure
+- Production ready
+- No mock data
+- No placeholder logic
+- No TODO sections
+- Full implementation
+
+Build a working MVP with all features above and production-quality code.

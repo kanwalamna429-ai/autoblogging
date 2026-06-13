@@ -1,0 +1,1 @@
+- [RSS-to-Blogger Platform Spec](rss-blogger-spec.md) — Full project spec: Next.js 15, Supabase, Gemini AI, Blogger API, social sharing
