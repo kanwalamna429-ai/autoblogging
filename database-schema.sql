@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS feeds (
   feed_url TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'General',
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  last_fetched_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -67,6 +68,8 @@ CREATE TABLE IF NOT EXISTS settings (
   ai_prompt TEXT,
   auto_publish BOOLEAN NOT NULL DEFAULT TRUE,
   auto_share BOOLEAN NOT NULL DEFAULT TRUE,
+  auto_fetch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  fetch_interval_hours INTEGER NOT NULL DEFAULT 6,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id)
 );

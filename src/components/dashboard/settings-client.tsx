@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Loader2, Eye, EyeOff, Key, Bot, Globe, Share2 } from "lucide-react";
+import { Save, Loader2, Eye, EyeOff, Key, Bot, Globe, Share2, RefreshCw, Clock } from "lucide-react";
 import type { Settings } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface SettingsClientProps {
   initialSettings: Settings | null;
@@ -27,12 +35,25 @@ const DEFAULT_PROMPT = `Rewrite the following article completely while preservin
 - Keep the original meaning intact
 Output valid HTML only.`;
 
+const INTERVAL_OPTIONS = [
+  { value: "1", label: "Every hour" },
+  { value: "2", label: "Every 2 hours" },
+  { value: "3", label: "Every 3 hours" },
+  { value: "6", label: "Every 6 hours" },
+  { value: "12", label: "Every 12 hours" },
+  { value: "24", label: "Once a day" },
+];
+
 export function SettingsClient({ initialSettings, userEmail }: SettingsClientProps) {
   const [geminiKey, setGeminiKey] = useState(initialSettings?.gemini_api_key || "");
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [aiPrompt, setAiPrompt] = useState(initialSettings?.ai_prompt || DEFAULT_PROMPT);
   const [autoPublish, setAutoPublish] = useState(initialSettings?.auto_publish ?? true);
   const [autoShare, setAutoShare] = useState(initialSettings?.auto_share ?? true);
+  const [autoFetchEnabled, setAutoFetchEnabled] = useState(initialSettings?.auto_fetch_enabled ?? false);
+  const [fetchIntervalHours, setFetchIntervalHours] = useState(
+    String(initialSettings?.fetch_interval_hours ?? 6)
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSave() {
@@ -46,6 +67,8 @@ export function SettingsClient({ initialSettings, userEmail }: SettingsClientPro
           ai_prompt: aiPrompt,
           auto_publish: autoPublish,
           auto_share: autoShare,
+          auto_fetch_enabled: autoFetchEnabled,
+          fetch_interval_hours: parseInt(fetchIntervalHours, 10),
         }),
       });
       const data = await res.json() as { error?: string };
@@ -115,6 +138,74 @@ export function SettingsClient({ initialSettings, userEmail }: SettingsClientPro
               </a>
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" />
+            Auto-Fetch
+            {autoFetchEnabled && (
+              <Badge variant="success" className="ml-1">Active</Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Automatically fetch RSS feeds and publish new posts on a schedule — no manual clicks needed
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Enable Auto-Fetch</p>
+              <p className="text-xs text-muted-foreground">
+                Fetch all active feeds automatically on a schedule
+              </p>
+            </div>
+            <Switch checked={autoFetchEnabled} onCheckedChange={setAutoFetchEnabled} />
+          </div>
+
+          {autoFetchEnabled && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Fetch Interval
+                </Label>
+                <Select value={fetchIntervalHours} onValueChange={setFetchIntervalHours}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INTERVAL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  How often to check each active feed for new content
+                </p>
+              </div>
+              <Separator />
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-xs font-medium">Setup required for automatic scheduling</p>
+                <p className="text-xs text-muted-foreground">
+                  1. Add <code className="bg-background px-1 rounded">CRON_SECRET</code> and{" "}
+                  <code className="bg-background px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> in Replit Secrets
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  2. Deploy to Vercel — it will run the cron automatically every hour using <code className="bg-background px-1 rounded">vercel.json</code>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  3. Or call <code className="bg-background px-1 rounded">/api/cron/fetch-feeds</code> with{" "}
+                  <code className="bg-background px-1 rounded">Authorization: Bearer YOUR_CRON_SECRET</code> from any external scheduler
+                </p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

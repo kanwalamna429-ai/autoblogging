@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
     ai_prompt?: string;
     auto_publish?: boolean;
     auto_share?: boolean;
+    auto_fetch_enabled?: boolean;
+    fetch_interval_hours?: number;
   };
 
   const { data: existing } = await supabase

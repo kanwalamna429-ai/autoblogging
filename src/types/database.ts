@@ -60,6 +60,7 @@ export interface Database {
           feed_url: string;
           category: string;
           active: boolean;
+          last_fetched_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -69,6 +70,7 @@ export interface Database {
           feed_url: string;
           category: string;
           active?: boolean;
+          last_fetched_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -78,6 +80,7 @@ export interface Database {
           feed_url?: string;
           category?: string;
           active?: boolean;
+          last_fetched_at?: string | null;
           created_at?: string;
         };
       };
@@ -174,6 +177,8 @@ export interface Database {
           ai_prompt: string | null;
           auto_publish: boolean;
           auto_share: boolean;
+          auto_fetch_enabled: boolean;
+          fetch_interval_hours: number;
           created_at: string;
         };
         Insert: {
@@ -186,6 +191,8 @@ export interface Database {
           ai_prompt?: string | null;
           auto_publish?: boolean;
           auto_share?: boolean;
+          auto_fetch_enabled?: boolean;
+          fetch_interval_hours?: number;
           created_at?: string;
         };
         Update: {
@@ -198,6 +205,8 @@ export interface Database {
           ai_prompt?: string | null;
           auto_publish?: boolean;
           auto_share?: boolean;
+          auto_fetch_enabled?: boolean;
+          fetch_interval_hours?: number;
           created_at?: string;
         };
       };

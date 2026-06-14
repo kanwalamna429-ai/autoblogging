@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Rss, Trash2, Edit, Play, Pause, RefreshCw, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Rss, Trash2, Edit, Play, Pause, RefreshCw, Loader2, ExternalLink, Clock } from "lucide-react";
 import type { Feed } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,11 +34,23 @@ interface FeedsClientProps {
   initialFeeds: Feed[];
 }
 
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export function FeedsClient({ initialFeeds }: FeedsClientProps) {
   const [feeds, setFeeds] = useState<Feed[]>(initialFeeds);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editFeed, setEditFeed] = useState<Feed | null>(null);
   const [fetchingFeed, setFetchingFeed] = useState<string | null>(null);
+  const [fetchingAll, setFetchingAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: "", feed_url: "", category: "General" });
 
@@ -162,6 +174,15 @@ export function FeedsClient({ initialFeeds }: FeedsClientProps) {
       toast.success(
         `Processed: ${data.processed}, Published: ${data.published}, Skipped: ${data.skipped}, Failed: ${data.failed}`
       );
+
+      const updatedFeed = feeds.find((f) => f.id === feedId);
+      if (updatedFeed) {
+        setFeeds((prev) =>
+          prev.map((f) =>
+            f.id === feedId ? { ...f, last_fetched_at: new Date().toISOString() } : f
+          )
+        );
+      }
     } catch {
       toast.error("Failed to fetch feed");
     } finally {
@@ -169,10 +190,59 @@ export function FeedsClient({ initialFeeds }: FeedsClientProps) {
     }
   }
 
+  async function handleFetchAll() {
+    const activeFeeds = feeds.filter((f) => f.active);
+    if (activeFeeds.length === 0) {
+      toast.error("No active feeds to fetch");
+      return;
+    }
+
+    setFetchingAll(true);
+    let totalProcessed = 0;
+    let totalPublished = 0;
+    let totalFailed = 0;
+
+    for (const feed of activeFeeds) {
+      try {
+        const res = await fetch("/api/feeds/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedId: feed.id }),
+        });
+        const data = await res.json() as {
+          processed?: number;
+          published?: number;
+          failed?: number;
+          error?: string;
+        };
+
+        if (res.ok) {
+          totalProcessed += data.processed || 0;
+          totalPublished += data.published || 0;
+          totalFailed += data.failed || 0;
+          setFeeds((prev) =>
+            prev.map((f) =>
+              f.id === feed.id ? { ...f, last_fetched_at: new Date().toISOString() } : f
+            )
+          );
+        }
+      } catch {
+        totalFailed++;
+      }
+    }
+
+    setFetchingAll(false);
+    toast.success(
+      `All feeds processed — Published: ${totalPublished}, New: ${totalProcessed}, Failed: ${totalFailed}`
+    );
+  }
+
   function openEdit(feed: Feed) {
     setEditFeed(feed);
     setForm({ name: feed.name, feed_url: feed.feed_url, category: feed.category });
   }
+
+  const activeCount = feeds.filter((f) => f.active).length;
 
   return (
     <div className="space-y-6">
@@ -181,10 +251,26 @@ export function FeedsClient({ initialFeeds }: FeedsClientProps) {
           <h1 className="text-3xl font-bold">RSS Feeds</h1>
           <p className="text-muted-foreground mt-1">Manage your content sources</p>
         </div>
-        <Button onClick={() => { setShowAddDialog(true); setForm({ name: "", feed_url: "", category: "General" }); }}>
-          <Plus className="w-4 h-4" />
-          Add Feed
-        </Button>
+        <div className="flex items-center gap-2">
+          {activeCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleFetchAll}
+              disabled={fetchingAll}
+            >
+              {fetchingAll ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {fetchingAll ? "Fetching all..." : `Fetch All (${activeCount})`}
+            </Button>
+          )}
+          <Button onClick={() => { setShowAddDialog(true); setForm({ name: "", feed_url: "", category: "General" }); }}>
+            <Plus className="w-4 h-4" />
+            Add Feed
+          </Button>
+        </div>
       </div>
 
       {feeds.length === 0 ? (
@@ -226,16 +312,24 @@ export function FeedsClient({ initialFeeds }: FeedsClientProps) {
                       {feed.feed_url}
                       <ExternalLink className="w-3 h-3 shrink-0" />
                     </a>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Added {formatDate(feed.created_at)}
-                    </p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Added {formatDate(feed.created_at)}
+                      </p>
+                      {feed.last_fetched_at && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Last fetched {timeAgo(feed.last_fetched_at)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       size="sm"
                       variant="default"
                       onClick={() => handleFetchFeed(feed.id)}
-                      disabled={fetchingFeed === feed.id}
+                      disabled={fetchingFeed === feed.id || fetchingAll}
                     >
                       {fetchingFeed === feed.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
