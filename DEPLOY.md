@@ -1,36 +1,63 @@
 # AutoBlog Platform — Deployment Guide
 
-## Overview
+## Architecture
 
-AutoBlog is a Next.js 15 app. Deploy it on **Vercel** (recommended — free tier works) for automatic cron support and global edge delivery.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  SUPABASE (all backend)                                     │
+│                                                             │
+│  PostgreSQL DB ──── Auth ──── pg_cron scheduler            │
+│       │                           │                        │
+│       │                           │ HTTP call (hourly)     │
+│       └───── Row Level Security   ↓                        │
+│                             /api/cron/fetch-feeds          │
+└─────────────────────────────────────────────────────────────┘
+              ↑ reads/writes data        ↑ API routes
+┌─────────────────────────────────────────────────────────────┐
+│  VERCEL (frontend only — Hobby plan)                       │
+│                                                             │
+│  Next.js 15  ──── API Routes  ──── Supabase SSR Auth       │
+│  (static pages + server components)                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key point:** Vercel hosts the Next.js app (no cron jobs needed). Supabase's built-in `pg_cron` scheduler triggers your app's API endpoint on a schedule — free on all Supabase plans.
 
 ---
 
-## Step 1 — Supabase Database
+## Step 1 — Supabase Database Setup
 
-1. Go to [supabase.com](https://supabase.com) and create a new project.
-2. Once created, go to **SQL Editor** and run **both** SQL files in order:
-   - `database-schema.sql` — creates all tables (run this first if new)
-   - `database-migration-auto-fetch.sql` — adds auto-fetch columns (run if you already had the schema)
-3. Go to **Settings → API** and copy:
-   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
-   - **anon / public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - **service_role / secret key** → `SUPABASE_SERVICE_ROLE_KEY`
+1. Go to [supabase.com](https://supabase.com) → create a new project.
+2. In **SQL Editor**, run these files in order:
 
-> ⚠️ Keep `SUPABASE_SERVICE_ROLE_KEY` private. Never expose it in client-side code.
+   **If this is a fresh setup:**
+   - `database-schema.sql`
+   - `database-migration-auto-fetch.sql`
+
+   **If you already had the schema:**
+   - `database-migration-auto-fetch.sql` only
+
+3. Go to **Settings → API** and save:
+
+| Value | Variable name |
+|-------|---------------|
+| Project URL | `NEXT_PUBLIC_SUPABASE_URL` |
+| anon / public key | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| service_role / secret key | `SUPABASE_SERVICE_ROLE_KEY` |
+
+> ⚠️ The `service_role` key bypasses Row Level Security. Never expose it in client code or commit it to git.
 
 ---
 
-## Step 2 — Google OAuth (for Blogger)
+## Step 2 — Google OAuth (Blogger API)
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a new project.
-2. Navigate to **APIs & Services → Library** and enable:
-   - **Blogger API v3**
-3. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**.
-4. Choose **Web application**.
-5. Add **Authorized Redirect URIs**:
-   - `http://localhost:5000/api/blogs/callback` (for local dev)
-   - `https://your-app.vercel.app/api/blogs/callback` (for production)
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → create a new project.
+2. **APIs & Services → Library** → enable **Blogger API v3**.
+3. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**.
+4. Type: **Web application**.
+5. **Authorized Redirect URIs** — add both:
+   - `http://localhost:5000/api/blogs/callback`
+   - `https://your-app.vercel.app/api/blogs/callback`
 6. Copy **Client ID** → `GOOGLE_CLIENT_ID`
 7. Copy **Client Secret** → `GOOGLE_CLIENT_SECRET`
 
@@ -38,68 +65,96 @@ AutoBlog is a Next.js 15 app. Deploy it on **Vercel** (recommended — free tier
 
 ## Step 3 — Generate a Cron Secret
 
-Run this in your terminal to generate a secure random string:
+This is a password that protects your auto-fetch endpoint from unauthorized calls.
 
 ```bash
+# Run in any terminal (or use any random string generator):
 openssl rand -hex 32
 ```
 
-Save this as `CRON_SECRET`. You'll need it later.
+Save the output as `CRON_SECRET`.
 
 ---
 
-## Step 4 — Local Development (Replit)
+## Step 4 — Deploy to Vercel (Hobby Plan)
 
-Add all secrets in **Replit → Secrets**:
-
-| Secret | Value |
-|--------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key |
-| `GOOGLE_CLIENT_ID` | Your Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Your Google OAuth client secret |
-| `NEXT_PUBLIC_APP_URL` | `https://your-replit-app.replit.app` |
-| `CRON_SECRET` | Your generated random string |
-
-Then click **Run** — the app starts on port 5000.
-
----
-
-## Step 5 — Deploy to Vercel
-
-### Option A: Deploy from GitHub (recommended)
+### Option A — GitHub (recommended)
 
 1. Push your code to a GitHub repository.
-2. Go to [vercel.com](https://vercel.com) → **New Project** → Import your repo.
-3. Add all environment variables in Vercel:
+2. [vercel.com](https://vercel.com) → **New Project** → import your repo.
+3. Add these environment variables in Vercel:
 
 | Variable | Value |
 |----------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key |
-| `GOOGLE_CLIENT_ID` | Your Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Your Google OAuth client secret |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
-| `CRON_SECRET` | Your cron secret |
+| `CRON_SECRET` | Your generated secret |
 
-4. Click **Deploy**.
+4. Click **Deploy**. Note your deployment URL (e.g. `https://my-autoblog.vercel.app`).
 
-### Option B: Deploy with Vercel CLI
+### Option B — Vercel CLI
 
 ```bash
 npm i -g vercel
 vercel
-```
-
-Follow the prompts and set env vars with:
-```bash
 vercel env add NEXT_PUBLIC_SUPABASE_URL
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
-# ... repeat for all variables
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add GOOGLE_CLIENT_ID
+vercel env add GOOGLE_CLIENT_SECRET
+vercel env add NEXT_PUBLIC_APP_URL
+vercel env add CRON_SECRET
 vercel --prod
 ```
+
+---
+
+## Step 5 — Enable Supabase pg_cron Scheduler
+
+This replaces Vercel cron entirely — Supabase calls your API on a schedule for free.
+
+1. Open `database-migration-cron-schedule.sql` in this project.
+2. Replace the two placeholders at the top:
+   - `YOUR_APP_URL` → your Vercel deployment URL (e.g. `my-autoblog.vercel.app`)
+   - `YOUR_CRON_SECRET` → the value you set for `CRON_SECRET`
+3. Run the edited SQL in **Supabase → SQL Editor**.
+
+**Verify it worked:**
+```sql
+SELECT jobname, schedule, active FROM cron.job WHERE jobname = 'autoblog-fetch-feeds';
+```
+
+**Test the endpoint manually:**
+```bash
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  https://your-app.vercel.app/api/cron/fetch-feeds
+```
+
+**Check execution history in Supabase:**
+```sql
+SELECT start_time, status, return_message
+FROM cron.job_run_details
+WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'autoblog-fetch-feeds')
+ORDER BY start_time DESC
+LIMIT 10;
+```
+
+### Change the schedule
+
+Edit `database-migration-cron-schedule.sql` and re-run, or update directly in Supabase:
+
+| Interval | Cron expression |
+|----------|----------------|
+| Every 1 hour | `0 * * * *` |
+| Every 2 hours | `0 */2 * * *` |
+| Every 3 hours | `0 */3 * * *` |
+| Every 6 hours | `0 */6 * * *` |
+| Every 12 hours | `0 */12 * * *` |
+| Once a day (8am UTC) | `0 8 * * *` |
 
 ---
 
@@ -107,74 +162,75 @@ vercel --prod
 
 ### Update Google OAuth redirect URI
 
-In Google Cloud Console → Credentials → your OAuth Client:
-- Add `https://your-app.vercel.app/api/blogs/callback` as an authorized redirect URI.
+In Google Cloud Console → Credentials → your OAuth client:
+- Confirm `https://your-app.vercel.app/api/blogs/callback` is listed.
 
-### Verify Cron is Running
+### First-time dashboard setup
 
-Vercel automatically reads `vercel.json` and schedules the cron endpoint at:
-```
-GET /api/cron/fetch-feeds
-```
-It runs every hour (`0 * * * *`). You can view cron executions in:
-**Vercel Dashboard → your project → Settings → Cron Jobs**
+1. Register / sign in at your deployed URL.
+2. **Settings** → paste your [Gemini API key](https://aistudio.google.com/apikey) → Save.
+3. **Blogs** → Connect Blogger → authorize via Google.
+4. **Feeds** → add your RSS feed URLs.
+5. **Settings** → turn on **Auto-Fetch**, choose interval → Save.
+6. **Settings** → turn on **Auto Publish to Blogger** → Save.
 
-To test the cron manually:
-```bash
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
-  https://your-app.vercel.app/api/cron/fetch-feeds
-```
-
-### First-Time User Setup (in the dashboard)
-
-1. Register/sign in at your deployed URL.
-2. Go to **Settings** → paste your [Gemini API key](https://aistudio.google.com/apikey).
-3. Go to **Blogs** → click **Connect Blogger** → authorize via Google.
-4. Go to **Feeds** → add your RSS feed URLs.
-5. Go to **Settings** → enable **Auto-Fetch** and choose your interval.
-6. Go to **Settings** → enable **Auto Publish to Blogger**.
-7. Save settings — new posts will now be fetched, rewritten, and published automatically.
+New posts will now be fetched from RSS, rewritten by Gemini AI, and published to Blogger automatically on the schedule you set.
 
 ---
 
-## Architecture
+## Local Development (Replit)
 
-```
-RSS Feed(s)
-    ↓  (every N hours via Vercel Cron or manual Fetch)
-/api/cron/fetch-feeds  or  /api/feeds/process
-    ↓
-Google Gemini AI  →  rewrites content to HTML
-    ↓
-Blogger API  →  publishes live post
-    ↓
-Social APIs  →  Bluesky / Mastodon / Tumblr / Pixelfed
+Add secrets in **Replit → Secrets** (wrench icon → Secrets tab):
+
+| Secret | Value |
+|--------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_APP_URL` | Your Replit app URL (shown after Run) |
+| `CRON_SECRET` | Your cron secret |
+
+The app starts on port 5000. To trigger auto-fetch manually in dev:
+```bash
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  http://localhost:5000/api/cron/fetch-feeds
 ```
 
 ---
 
 ## Environment Variables Reference
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ for cron | Supabase service role key (server only) |
-| `GOOGLE_CLIENT_ID` | ✅ for Blogger | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | ✅ for Blogger | Google OAuth client secret |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Full URL of your deployed app |
-| `CRON_SECRET` | ✅ for cron | Secret token to authenticate cron calls |
+| Variable | Where to get it | Required |
+|----------|----------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API | ✅ Always |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API | ✅ Always |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API | ✅ For cron |
+| `GOOGLE_CLIENT_ID` | Google Cloud Console | ✅ For Blogger |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud Console | ✅ For Blogger |
+| `NEXT_PUBLIC_APP_URL` | Your deployed URL | ✅ For OAuth |
+| `CRON_SECRET` | Generate with `openssl rand -hex 32` | ✅ For cron |
 
 ---
 
 ## Troubleshooting
 
-**"Gemini API key not configured"** — Go to Settings in the dashboard and save your Gemini API key.
+**"Gemini API key not configured"**
+→ Go to Settings in the dashboard and save your Gemini API key.
 
-**"Cannot connect to Blogger"** — Check `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and that your redirect URI is added in Google Cloud Console.
+**"Cannot connect to Blogger"**
+→ Check `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and that the redirect URI is correct in Google Cloud Console.
 
-**Cron not running** — Verify `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` are set in Vercel env vars. Check Vercel → Settings → Cron Jobs.
+**Auto-fetch not running**
+→ Check Supabase SQL Editor: `SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 5;`
+→ Verify `pg_net` extension is enabled: Supabase → Database → Extensions.
+→ Confirm `CRON_SECRET` in your Vercel env vars matches what's in the pg_cron SQL.
 
-**Auth not working** — Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are correct and that the database schema has been run.
+**Auth / login not working**
+→ Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set correctly.
+→ Confirm the database schema SQL has been run.
 
-**Posts not publishing** — In the dashboard, check the **Activity Log** for error details. Common causes: expired Blogger token (re-connect in Blogs page), no blog selected in settings.
+**Posts not publishing to Blogger**
+→ Check Activity Log in the dashboard for error details.
+→ Common causes: expired Blogger token (re-connect in Blogs page), no default blog selected in Settings.

@@ -190,18 +190,20 @@ export function SettingsClient({ initialSettings, userEmail }: SettingsClientPro
                 </p>
               </div>
               <Separator />
-              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                <p className="text-xs font-medium">Setup required for automatic scheduling</p>
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+                <p className="text-xs font-medium">Scheduling is handled by Supabase pg_cron</p>
                 <p className="text-xs text-muted-foreground">
                   1. Add <code className="bg-background px-1 rounded">CRON_SECRET</code> and{" "}
-                  <code className="bg-background px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> in Replit Secrets
+                  <code className="bg-background px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> to your environment secrets
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  2. Deploy to Vercel — it will run the cron automatically every hour using <code className="bg-background px-1 rounded">vercel.json</code>
+                  2. Deploy your app to Vercel, then fill in <code className="bg-background px-1 rounded">database-migration-cron-schedule.sql</code> with your app URL and cron secret
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  3. Or call <code className="bg-background px-1 rounded">/api/cron/fetch-feeds</code> with{" "}
-                  <code className="bg-background px-1 rounded">Authorization: Bearer YOUR_CRON_SECRET</code> from any external scheduler
+                  3. Run that SQL in <strong>Supabase → SQL Editor</strong> — Supabase will call your API on the schedule above automatically
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  See <code className="bg-background px-1 rounded">DEPLOY.md</code> for the full setup guide
                 </p>
               </div>
             </>
