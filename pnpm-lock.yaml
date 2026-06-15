@@ -123,7 +123,7 @@ importers:
         specifier: ^2.6.0
         version: 2.6.1
       tailwindcss:
-        specifier: ^3.4.17
+        specifier: 3.4.19
         version: 3.4.19
       zod:
         specifier: ^3.24.1
