@@ -25,6 +25,7 @@ export interface Database {
           email?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       blogs: {
         Row: {
@@ -51,6 +52,7 @@ export interface Database {
           blog_url?: string;
           connected_at?: string;
         };
+        Relationships: [];
       };
       feeds: {
         Row: {
@@ -83,6 +85,7 @@ export interface Database {
           last_fetched_at?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       posts: {
         Row: {
@@ -130,6 +133,7 @@ export interface Database {
           status?: "draft" | "published" | "failed";
           created_at?: string;
         };
+        Relationships: [];
       };
       social_accounts: {
         Row: {
@@ -165,6 +169,7 @@ export interface Database {
           last_shared_at?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       settings: {
         Row: {
@@ -209,6 +214,7 @@ export interface Database {
           fetch_interval_hours?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       logs: {
         Row: {
@@ -235,7 +241,20 @@ export interface Database {
           status?: "success" | "failed";
           created_at?: string;
         };
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

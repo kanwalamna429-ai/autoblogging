@@ -7,7 +7,7 @@ export default async function BlogsPage() {
 
   const [blogsResult, settingsResult] = await Promise.all([
     supabase.from("blogs").select("*").eq("user_id", user!.id).order("connected_at", { ascending: false }),
-    supabase.from("settings").select("selected_blog_id, blogger_access_token").eq("user_id", user!.id).single(),
+    supabase.from("settings").select("*").eq("user_id", user!.id).single(),
   ]);
 
   return (

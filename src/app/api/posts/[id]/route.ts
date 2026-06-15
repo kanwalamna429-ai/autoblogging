@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
+
+type PostUpdate = Database["public"]["Tables"]["posts"]["Update"];
 
 export async function PATCH(
   request: NextRequest,
@@ -14,10 +17,10 @@ export async function PATCH(
   }
 
   const body = await request.json() as Record<string, unknown>;
-  const allowed = ["rewritten_title", "rewritten_content", "meta_description", "tags", "status"];
-  const updates: Record<string, unknown> = {};
+  const allowed: (keyof PostUpdate)[] = ["rewritten_title", "rewritten_content", "meta_description", "tags", "status"];
+  const updates: PostUpdate = {};
   for (const key of allowed) {
-    if (key in body) updates[key] = body[key];
+    if (key in body) (updates as Record<string, unknown>)[key] = body[key];
   }
 
   const { data, error } = await supabase

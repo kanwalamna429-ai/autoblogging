@@ -1,1 +1,3 @@
-- [RSS-to-Blogger Platform Spec](rss-blogger-spec.md) — Full project spec: Next.js 15, Supabase, Gemini AI, Blogger API, social sharing
+- [Supabase version compatibility](supabase-version-compat.md) — @supabase/ssr must match supabase-js version or all DB types resolve as `never`
+- [Supabase Database type format](supabase-db-type-format.md) — Database type needs Views/Functions (no Enums/CompositeTypes needed by GenericSchema)
+- [Supabase update strict typing](supabase-update-strict.md) — postgrest-js v2.108+ uses RejectExcessProperties; cast Record<string,unknown> updates to typed Update type

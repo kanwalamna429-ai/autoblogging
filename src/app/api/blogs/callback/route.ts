@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (blogs.length > 0) {
-      const { data: settings } = await supabase.from("settings").select("selected_blog_id").eq("user_id", userId).single();
+      const { data: settings } = await supabase.from("settings").select("*").eq("user_id", userId).single();
       if (!settings?.selected_blog_id) {
         await supabase.from("settings").update({ selected_blog_id: blogs[0].id }).eq("user_id", userId);
       }
